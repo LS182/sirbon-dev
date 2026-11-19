@@ -26,7 +26,7 @@ The repository intentionally contains no account credentials or deployment confi
 1. Create a D1 database and set it to the `DB` binding.
 2. Set `D1_DATABASE` locally or replace the placeholder `database_id` in `wrangler.toml`.
 3. Configure a GitHub App for public metadata only if repository integration is needed.
-4. Set `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, and `ADMIN_ACCESS_TOKEN` as Cloudflare secrets.
+4. Set `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_INSTALLATION_ID`, `ADMIN_GITHUB_ACCOUNT_ID`, and `APP_ORIGIN` as Cloudflare variables/secrets.
 5. Run migrations: `npx wrangler d1 migrations apply sirbon --remote`.
 
 Private repository data must never be sent through public APIs or included in static frontend bundles.
