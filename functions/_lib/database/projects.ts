@@ -21,7 +21,8 @@ export function isPublicProjectVisible(row: Record<string, unknown>): boolean {
 }
 
 export function publicProject(row: Record<string, unknown>) {
-  const privateProject = Boolean(row.is_private)
+  // Fail closed: treat anything other than explicit 0/false as private.
+  const privateProject = row.is_private !== 0 && row.is_private !== false
   return {
     id: row.id,
     slug: row.slug,
@@ -43,9 +44,9 @@ const PUBLIC_VISIBILITY_WHERE = `
   AND (
     is_private = 0
     OR (
-      public_name IS NOT NULL AND public_name <> ''
-      AND public_summary IS NOT NULL AND public_summary <> ''
-      AND public_description IS NOT NULL AND public_description <> ''
+      TRIM(COALESCE(public_name, '')) <> ''
+      AND TRIM(COALESCE(public_summary, '')) <> ''
+      AND TRIM(COALESCE(public_description, '')) <> ''
     )
   )
 `

@@ -56,17 +56,26 @@ async function fetchInstallationPages(token: string): Promise<Array<Record<strin
   return repositories
 }
 
-async function fetchPublicOrgPages(): Promise<Array<Record<string, unknown>>> {
+async function fetchPublicAccountPages(): Promise<Array<Record<string, unknown>>> {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'User-Agent': 'sirbon-dev',
   }
   const repositories: Array<Record<string, unknown>> = []
+  let endpointKind: 'users' | 'orgs' = 'users'
+
   for (let page = 1; page <= 10; page++) {
-    const response = await fetch(
-      `https://api.github.com/orgs/${GITHUB_ORG}/repos?per_page=100&type=all&page=${page}`,
+    let response = await fetch(
+      `https://api.github.com/${endpointKind}/${GITHUB_ORG}/repos?per_page=100&type=owner&page=${page}`,
       { headers },
     )
+    if (page === 1 && response.status === 404 && endpointKind === 'users') {
+      endpointKind = 'orgs'
+      response = await fetch(
+        `https://api.github.com/orgs/${GITHUB_ORG}/repos?per_page=100&type=all&page=${page}`,
+        { headers },
+      )
+    }
     if (response.status === 403 || response.status === 429) {
       throw new Error(`GitHub API rate limit or access denied (${response.status})`)
     }
@@ -99,7 +108,7 @@ export async function fetchGitHubRepositories(env: Env): Promise<SyncedGitHubRep
       }
     }
   } else {
-    repositories = await fetchPublicOrgPages()
+    repositories = await fetchPublicAccountPages()
   }
 
   const readmeHeaders: Record<string, string> = {

@@ -17,5 +17,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "shared", "functions", "tests"]
+  "include": ["src", "shared", "functions", "worker", "tests"]
 }

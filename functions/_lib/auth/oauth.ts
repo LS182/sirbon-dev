@@ -5,6 +5,7 @@ import {
   saveOAuthState,
   upsertAdministrator,
 } from '../database/auth'
+import { resolveAppOrigin } from '../http/origin'
 import { json, redirect } from '../http/response'
 import {
   buildAuthSessionCookies,
@@ -31,8 +32,7 @@ export async function initiateGitHubOAuth(request: Request, env: Env): Promise<R
   const stateHash = await sha256(state)
   await saveOAuthState(env.DB, stateHash)
 
-  const requestUrl = new URL(request.url)
-  const origin = env.APP_ORIGIN ? new URL(env.APP_ORIGIN).origin : requestUrl.origin
+  const origin = resolveAppOrigin(request, env)
   const redirectUri = new URL(OAUTH_CALLBACK_PATH, origin)
 
   const authorizeUrl = new URL('https://github.com/login/oauth/authorize')
@@ -69,7 +69,7 @@ export async function handleGitHubOAuthCallback(request: Request, env: Env): Pro
     return json({ error: 'OAuth state expired' }, 400)
   }
 
-  const origin = env.APP_ORIGIN ? new URL(env.APP_ORIGIN).origin : url.origin
+  const origin = resolveAppOrigin(request, env)
   const redirectUri = new URL(OAUTH_CALLBACK_PATH, origin).toString()
 
   const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
@@ -130,7 +130,7 @@ export async function handleGitHubOAuthCallback(request: Request, env: Env): Pro
     login: githubUser.login,
   })
 
-  const destination = env.APP_ORIGIN ? `${new URL(env.APP_ORIGIN).origin}/admin/dashboard` : '/admin/dashboard'
+  const destination = `${origin}/admin/dashboard`
   return redirect(destination, [
     ...buildAuthSessionCookies(request, rawSession, csrfToken),
     clearOAuthStateCookie(request),

@@ -28,9 +28,33 @@ export async function synchronizeRepositories(db: D1Database, env: Env, githubLo
           repository_id = excluded.repository_id,
           repository_full_name = excluded.repository_full_name,
           is_private = excluded.is_private,
-          published = CASE WHEN excluded.is_private = 1 THEN 0 ELSE projects.published END,
-          featured = CASE WHEN excluded.is_private = 1 THEN 0 ELSE projects.featured END,
-          excluded = CASE WHEN excluded.is_private = 1 THEN 1 ELSE projects.excluded END,
+          published = CASE
+            WHEN excluded.is_private = 1 AND (
+              projects.is_private = 0
+              OR TRIM(COALESCE(projects.public_name, '')) = ''
+              OR TRIM(COALESCE(projects.public_summary, '')) = ''
+              OR TRIM(COALESCE(projects.public_description, '')) = ''
+            ) THEN 0
+            ELSE projects.published
+          END,
+          featured = CASE
+            WHEN excluded.is_private = 1 AND (
+              projects.is_private = 0
+              OR TRIM(COALESCE(projects.public_name, '')) = ''
+              OR TRIM(COALESCE(projects.public_summary, '')) = ''
+              OR TRIM(COALESCE(projects.public_description, '')) = ''
+            ) THEN 0
+            ELSE projects.featured
+          END,
+          excluded = CASE
+            WHEN excluded.is_private = 1 AND (
+              projects.is_private = 0
+              OR TRIM(COALESCE(projects.public_name, '')) = ''
+              OR TRIM(COALESCE(projects.public_summary, '')) = ''
+              OR TRIM(COALESCE(projects.public_description, '')) = ''
+            ) THEN 1
+            ELSE projects.excluded
+          END,
           repository_url = CASE WHEN excluded.is_private = 1 THEN NULL ELSE COALESCE(excluded.repository_url, projects.repository_url) END,
           default_branch = excluded.default_branch,
           language = CASE WHEN excluded.is_private = 0 THEN excluded.language ELSE NULL END,

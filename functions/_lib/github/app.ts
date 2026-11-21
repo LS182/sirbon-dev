@@ -52,7 +52,7 @@ export function wrapPkcs1InPkcs8(pkcs1Der: Uint8Array): Uint8Array {
 }
 
 export async function importGitHubAppPrivateKey(pem: string): Promise<CryptoKey> {
-  const unescaped = pem.replace(/\\n/g, '\n').trim()
+  const unescaped = pem.trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n').trim()
   const isPkcs1 = /-----BEGIN RSA PRIVATE KEY-----/.test(unescaped)
   const base64 = unescaped
     .replace(/-----BEGIN [^-]+-----/g, '')

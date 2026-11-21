@@ -71,13 +71,13 @@ describe('GitHub App JWT, repository sync and private metadata isolation', () =>
     })).toBe(false)
   })
 
-  it('paginates public GitHub repositories, decodes UTF-8 READMEs, and never exposes private fields', async () => {
+  it('paginates public GitHub repositories via /users/LS182/repos, decodes UTF-8 READMEs, and never exposes private fields', async () => {
     const originalFetch = globalThis.fetch
     let callCount = 0
     globalThis.fetch = (async (input: string | URL | Request) => {
       callCount++
       const url = String(input)
-      if (url.includes('/orgs/LS182/repos')) {
+      if (url.includes('/users/LS182/repos')) {
         return new Response(JSON.stringify(callCount === 1 ? [
           {
             id: 1,
@@ -121,6 +121,60 @@ describe('GitHub App JWT, repository sync and private metadata isolation', () =>
       expect(repositories[1].htmlUrl).toBeNull()
       expect(repositories[1].description).toBeNull()
       expect(repositories[1].readme).toBeNull()
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('authenticates GitHub App installation tokens and fetches private repos without exposing private metadata', async () => {
+    const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
+    const pkcs1Pem = privateKey.export({ type: 'pkcs1', format: 'pem' }).toString()
+
+    const originalFetch = globalThis.fetch
+    let tokenRequests = 0
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input)
+      if (url.includes('/app/installations/184466368/access_tokens')) {
+        tokenRequests++
+        return new Response(JSON.stringify({ token: `ghs_token_${tokenRequests}` }), { status: 201 })
+      }
+      if (url.includes('/installation/repositories')) {
+        return new Response(JSON.stringify({
+          total_count: 1,
+          repositories: [
+            {
+              id: 99,
+              name: 'private-app',
+              full_name: 'LS182/private-app',
+              private: true,
+              description: 'Confidential repo description',
+              html_url: 'https://github.com/LS182/private-app',
+              homepage: 'https://internal.sirbon.dev',
+              language: 'TypeScript',
+              topics: ['secret'],
+              default_branch: 'main',
+            },
+          ],
+        }), { status: 200 })
+      }
+      return new Response('{}', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const repositories = await fetchGitHubRepositories({
+        GITHUB_APP_CLIENT_ID: 'Iv23testclient',
+        GITHUB_APP_INSTALLATION_ID: '184466368',
+        GITHUB_APP_PRIVATE_KEY: pkcs1Pem,
+      })
+      expect(tokenRequests).toBe(1)
+      expect(repositories).toHaveLength(1)
+      expect(repositories[0].private).toBe(true)
+      expect(repositories[0].htmlUrl).toBeNull()
+      expect(repositories[0].homepage).toBeNull()
+      expect(repositories[0].description).toBeNull()
+      expect(repositories[0].language).toBeNull()
+      expect(repositories[0].topics).toEqual([])
+      expect(repositories[0].readme).toBeNull()
     } finally {
       globalThis.fetch = originalFetch
     }

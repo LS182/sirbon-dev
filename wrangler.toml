@@ -1,10 +1,16 @@
 name = "sirbon-dev"
+main = "worker/index.ts"
 compatibility_date = "2026-11-21"
-pages_build_output_dir = "dist"
+keep_vars = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "sirbon"
-# Bind the existing remote D1 database (`sirbon`) via Cloudflare Pages Dashboard -> Settings -> Functions -> D1 database bindings,
-# or provide your database_id locally without committing credentials.
-database_id = ""
+# Required by `wrangler deploy` on Cloudflare Workers so the `DB` binding is preserved.
+database_id = "b0068a09-76b4-4779-8adc-d9cc22d1b754"

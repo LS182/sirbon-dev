@@ -42,12 +42,13 @@ export function readOAuthCookie(cookies: Map<string, string>): string | undefine
 
 export function buildOAuthStateCookie(request: Request, state: string): string {
   const { oauthName, secureFlag } = cookieSecurityAttributes(request)
-  return `${oauthName}=${encodeURIComponent(state)}; Path=/api/auth/github/callback; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=600`
+  // RFC 6265bis: __Host- cookies require Path=/ and no Domain attribute.
+  return `${oauthName}=${encodeURIComponent(state)}; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=600`
 }
 
 export function clearOAuthStateCookie(request: Request): string {
   const { oauthName, secureFlag } = cookieSecurityAttributes(request)
-  return `${oauthName}=; Path=/api/auth/github/callback; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=0`
+  return `${oauthName}=; Path=/; HttpOnly${secureFlag}; SameSite=Lax; Max-Age=0`
 }
 
 export function buildAuthSessionCookies(request: Request, rawSession: string, csrfToken: string): string[] {

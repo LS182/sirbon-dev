@@ -159,4 +159,87 @@ describe('authentication, session, CSRF and API security', () => {
     expect(setCookies.some((cookie) => cookie.startsWith('__Host-sirbon_session=;'))).toBe(true)
     expect(setCookies.some((cookie) => cookie.startsWith('sirbon_csrf=;'))).toBe(true)
   })
+
+  it('completes OAuth initiation and callback with RFC 6265bis __Host- Path=/ cookies and numeric ID allowlisting', async () => {
+    const savedStates = new Map<string, string>()
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes('INSERT INTO oauth_states')) {
+              savedStates.set(String(args[0]), '2099-12-31T23:59:59Z')
+            } else if (sql.includes('DELETE FROM oauth_states WHERE state_hash')) {
+              savedStates.delete(String(args[0]))
+            }
+            return { success: true }
+          },
+          first: async () => {
+            if (sql.includes('FROM oauth_states')) {
+              const expires = savedStates.get(String(args[0]))
+              return expires ? { expires_at: expires } : null
+            }
+            return null
+          },
+        }),
+        run: async () => ({ success: true }),
+      }),
+    } as unknown as D1Database
+
+    const env = {
+      DB: db,
+      GITHUB_APP_CLIENT_ID: 'Iv23testclient',
+      GITHUB_APP_CLIENT_SECRET: 'test-secret',
+      ADMIN_GITHUB_ACCOUNT_ID: '165507639',
+      APP_ORIGIN: 'https://sirbon.dev',
+    }
+
+    const startRes = await dispatchApiRequest(new Request('https://sirbon.dev/api/auth/github'), env)
+    expect(startRes.status).toBe(302)
+    const location = new URL(startRes.headers.get('Location') || '')
+    expect(location.origin).toBe('https://github.com')
+    expect(location.searchParams.get('scope')).toBe('read:user')
+    expect(location.searchParams.get('redirect_uri')).toBe('https://sirbon.dev/api/auth/github/callback')
+
+    const state = location.searchParams.get('state') || ''
+    const oauthCookie = startRes.headers.getSetCookie()[0] || ''
+    expect(oauthCookie).toContain('__Host-sirbon_oauth=')
+    expect(oauthCookie).toContain('Path=/;')
+    expect(oauthCookie).toContain('HttpOnly')
+    expect(oauthCookie).toContain('Secure')
+    expect(oauthCookie).toContain('SameSite=Lax')
+
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input)
+      if (url.includes('/login/oauth/access_token')) {
+        return new Response(JSON.stringify({ access_token: 'gho_mock' }), { status: 200 })
+      }
+      if (url === 'https://api.github.com/user') {
+        return new Response(JSON.stringify({ id: 165507639, login: 'LS182' }), { status: 200 })
+      }
+      return new Response('{}', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const callbackRes = await dispatchApiRequest(
+        new Request(`https://sirbon.dev/api/auth/github/callback?code=abc&state=${encodeURIComponent(state)}`, {
+          headers: {
+            Cookie: `__Host-sirbon_oauth=${encodeURIComponent(state)}`,
+            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Dest': 'document',
+          },
+        }),
+        env,
+      )
+      expect(callbackRes.status).toBe(302)
+      expect(callbackRes.headers.get('Location')).toBe('https://sirbon.dev/admin/dashboard')
+      const cookies = callbackRes.headers.getSetCookie()
+      expect(cookies.some((c) => c.startsWith('__Host-sirbon_session=') && c.includes('Path=/;'))).toBe(true)
+      expect(cookies.some((c) => c.startsWith('sirbon_csrf=') && c.includes('Path=/;'))).toBe(true)
+      expect(cookies.some((c) => c.startsWith('__Host-sirbon_oauth=;') && c.includes('Path=/;'))).toBe(true)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })

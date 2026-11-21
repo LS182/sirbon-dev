@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { dispatchApiRequest } from '../functions/_lib/router'
 import { sha256 } from '../functions/_lib/security/crypto'
 import { enquiryInputSchema, projectUpdateSchema, reviewInputSchema } from '../shared/schemas'
+import workerEntry from '../worker/index'
 
 describe('API routes, schemas and validation contracts', () => {
   it('validates contact enquiries and reviews against backend schemas', () => {
@@ -134,5 +135,34 @@ describe('API routes, schemas and validation contracts', () => {
     expect(response.status).toBe(400)
     const body = await response.json() as { error?: string }
     expect(body.error).toContain('Private repositories require')
+  })
+
+  it('routes /api/* through the Worker API dispatcher and serves SPA routes via ASSETS binding', async () => {
+    const assetRequests: string[] = []
+    const assetsBinding = {
+      fetch: async (req: Request) => {
+        assetRequests.push(new URL(req.url).pathname)
+        return new Response('<html>SPA</html>', {
+          status: 200,
+          headers: { 'Content-Type': 'text/html' },
+        })
+      },
+    }
+
+    const apiResponse = await workerEntry.fetch(
+      new Request('https://sirbon-dev.workers.dev/api/health'),
+      { ASSETS: assetsBinding },
+    )
+    expect(apiResponse.status).toBe(200)
+    const health = await apiResponse.json() as { ok: boolean }
+    expect(health.ok).toBe(true)
+    expect(assetRequests).toHaveLength(0)
+
+    const spaResponse = await workerEntry.fetch(
+      new Request('https://sirbon-dev.workers.dev/projects'),
+      { ASSETS: assetsBinding },
+    )
+    expect(spaResponse.status).toBe(200)
+    expect(assetRequests).toEqual(['/projects'])
   })
 })
