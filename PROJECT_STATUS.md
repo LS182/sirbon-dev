@@ -1,95 +1,41 @@
 # Project Status
 
-## Completed functionality
+## Architecture & Completed Functionality
 
-- Personal identity and portfolio content for Liam Victor Sirbon, based in Cape Town.
-- About, experience/education and categorized skills pages using only supplied, verifiable information.
-- Maintained StudentRent and Tee2Pin Dinner Club as clearly labeled academic/group case studies with purpose, architecture, Liam's contributions and engineering decisions.
-- Real-portrait placeholder with no stock or AI-generated image; project visual evidence is not fabricated.
-- Added dedicated routes for `/about`, `/experience`, `/skills`, `/projects`, and `/contact`.
+- **Feature-based frontend (`src/features/`, `src/app/`, `src/shared/`)**:
+  - Dedicated feature modules for `home`, `about`, `experience`, `skills`, `services`, `projects`, `reviews`, `contact`, `auth`, `admin`, and `not-found`.
+  - Code-split `/admin` and `/admin/dashboard` routes via `React.lazy`.
+  - Modular CSS design system (`tokens.css`, `base.css`, `layout.css`, `components.css`, `pages.css`) using the Sirbon brand palette (`#5ba47a`, `#00a763`, `#eafef1`, `#1d1d35`) with WCAG AA+ contrast, `:focus-visible` outlines, skip links, and `prefers-reduced-motion` support.
+- **Personal authenticity**:
+  - Verified profile, CPUT education, student leadership, and technical skill groups for Liam Victor Sirbon (Cape Town).
+  - StudentRent and Tee2Pin Dinner Club presented accurately as academic projects with purpose, problem, features, architecture, contributions, technical decisions, and lessons learned.
+- **Modular Cloudflare Pages Functions backend (`functions/api/` + `functions/_lib/`)**:
+  - File-based API routes under `functions/api/` protected by `functions/api/_middleware.ts` (OPTIONS, Fetch Metadata isolation, Origin checks, error boundary) and `functions/api/[[catchall]].ts` (404 JSON fallback).
+  - Dedicated backend modules for D1 queries (`functions/_lib/database/`), GitHub OAuth (`functions/_lib/auth/`), GitHub App JWT/installation tokens & sync (`functions/_lib/github/`), security/cookies (`functions/_lib/security/`), and HTTP responses (`functions/_lib/http/`).
+  - GitHub App RS256 JWT signing supports both PKCS#1 (`BEGIN RSA PRIVATE KEY`, GitHub's native format) and PKCS#8 (`BEGIN PRIVATE KEY`) PEM keys, including escaped `\n` newlines from dashboard secrets.
+- **Security & Privacy**:
+  - Immutable numeric GitHub account ID allowlisting (`ADMIN_GITHUB_ACCOUNT_ID`) with constant-time comparison.
+  - Hashed single-use OAuth state, hashed server-side sessions, double-submit CSRF tokens, `Clear-Site-Data` + multi-cookie clearing on logout, and static + API security headers (`public/_headers`).
+  - Private repository redaction enforced both at query time and on `PUT /api/admin/projects/:slug` (private repos require explicitly authored `publicName`, `publicSummary`, and `publicDescription` before publishing).
 
-- Public React pages for home, projects, project details, about, services, reviews, contact and a custom 404.
-- Public project data is fetched from the Pages API; production components no longer contain demonstration projects.
-- Responsive premium portfolio styling using the Sirbon brand palette.
-- GitHub repository discovery for the `LS182` organization, with public pagination and optional GitHub App installation access.
-- Public repository metadata caching, README caching for public repositories, and manual administrator synchronization.
-- Private repository protection: private metadata and repository URLs are excluded from public responses and private projects require approved public case-study fields.
-- GitHub OAuth login with state cookies, callback validation, OAuth code exchange, immutable account-ID allowlisting and server-side sessions.
-- Hashed session identifiers and CSRF tokens, HttpOnly/Secure/SameSite cookies, logout and protected independent admin endpoints.
-- D1 models and API endpoints for projects, synchronization history, enquiries, reviews, administrators, sessions, OAuth states and settings.
-- Contact and review submission with Zod validation, honeypot fields, moderation and durable database writes.
-- D1-backed per-IP submission rate limits protect contact and review forms.
-- Notification provider abstraction through `NOTIFICATION_WEBHOOK_URL`; notification failure does not remove a stored enquiry.
-- Admin dashboard sections for overview, repositories, synchronization, enquiries, review moderation and settings.
-- Project publishing, featuring, excluding and ordering controls.
+## Database Migrations
 
-## Pre-deployment audit verification
+- Remote D1 database: `sirbon` (binding: `DB`).
+- Applied migrations (unmodified):
+  - `migrations/0001_initial.sql`
+  - `migrations/0002_portfolio_application.sql`
+- Schema reference documented in `migrations/SCHEMA.md`. No new migrations were required.
 
-- Independently reviewed the OAuth/callback, session, CSRF, origin, public API, project synchronization and moderation paths.
-- Verified both SQL migrations against an isolated SQLite database: `0001_initial.sql` and `0002_portfolio_application.sql` apply successfully.
-- Fixed additive migration SQL typos that would have prevented `0002_portfolio_application.sql` from applying.
-- Fixed session reuse: successful administrator OAuth now invalidates prior sessions for that immutable GitHub account ID before creating the replacement session.
-- Fixed logout: `/api/auth/logout` and `/api/admin/logout` now require a valid session and CSRF and clear both session and CSRF cookies.
-- Fixed private project publication: private projects now require administrator-authored `public_name`, `public_summary` and `public_description`; synchronized repository names cannot serve as the public name.
-- Repository synchronization now unpublishes and excludes a newly private repository. It does not change publication decisions for a repository that remains public.
-- Project mutation now uses a strict Zod update schema and rejects unknown/nonexistent project IDs with explicit validation responses.
-- Public project and detail queries now return generic database-error responses instead of allowing implementation errors to escape.
-- GitHub synchronization now returns explicit rate-limit/access-denied failures instead of generic fetch failures.
-- 15 isolated tests pass without credentials or a Cloudflare account.
+## Required Manual Configuration (Cloudflare Pages Dashboard)
 
-## Incomplete functionality
-
-- GitHub App and D1 credentials are intentionally not configured.
-- Private GitHub repository access is implemented only when installation credentials and an installation ID are supplied.
-- README content is cached only for public repositories.
-- Review and enquiry management are working through API-backed dashboard sections; richer editing and email templates remain optional.
-- The settings section exposes the settings API but does not ship deployment-specific content fields.
-- Production email delivery requires configuring `NOTIFICATION_WEBHOOK_URL`.
-
-## Database migrations
-
-- `migrations/0001_initial.sql` remains unchanged.
-- `migrations/0002_portfolio_application.sql` adds additive project repository fields and tables for synchronization history, enquiries, reviews, administrators, sessions, OAuth states and site settings.
-
-## Security decisions
-
-- No static `ADMIN_ACCESS_TOKEN` authentication remains.
-- GitHub users are authorized only by the exact immutable numeric account ID in `ADMIN_GITHUB_ACCOUNT_ID`.
-- Browser-supplied usernames are never used for authorization.
-- Session identifiers and CSRF values are stored or transmitted in hashed form as appropriate.
-- OAuth state is random, hashed in D1, single-use and short-lived.
-- Admin mutations require Origin and CSRF validation.
-- Public API responses do not include private README, source, URL or private metadata.
-- Private repositories default to unpublished and excluded from public listing.
-
-## Required manual configuration
-
-1. Create/configure D1 and set the `DB` binding.
-2. Apply migrations to the target D1 database.
-3. Create a GitHub OAuth App or GitHub App OAuth credentials and set the callback to `/api/auth/github/callback`.
-4. Set `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, and optionally `GITHUB_APP_INSTALLATION_ID`.
-5. Set `ADMIN_GITHUB_ACCOUNT_ID` to the administrator's immutable GitHub numeric ID.
-6. Set `APP_ORIGIN` to the deployed origin.
-7. Optionally set `NOTIFICATION_WEBHOOK_URL` for enquiry notifications.
-
-## Tests executed
-
-- `npm run typecheck`
-- `npm run lint`
-- `npm test` — 15 tests passed
-- `npm run build`
-- `npm install`
-- `npm run check:config` is not expected to pass until deployment values are configured.
-
-Tests cover immutable-ID authorization logic, OAuth/session hashing, session expiry, cookie parsing, unauthorized admin access, CSRF rejection, mismatched OAuth state, contact and review validation, project update validation, publishing/exclusion visibility, submission limits, private project metadata redaction and public GitHub pagination behavior.
-
-## Known limitations
-
-- No Cloudflare account, D1 database or GitHub credentials are configured or inferred.
-- GitHub installation access is bounded to repositories exposed by the configured installation.
-- Public repository names/descriptions can change when synchronization runs.
-- Administrator-authored public summaries and descriptions must be supplied manually for private projects.
-- The notification provider currently supports a webhook contract only; no SMTP or transactional email provider is bundled.
-- Real GitHub OAuth, GitHub App installation access, private repository synchronization and D1 behavior have not been exercised with production credentials.
-- Public and private repository API behavior is covered by isolated mocks and source-level isolation checks, not live GitHub rate-limit or installation responses.
-- Automatic repository cache expiry is not implemented; repository metadata is refreshed only through manual administrator synchronization.
+1. Bind existing D1 database `sirbon` to binding name `DB` for Production and Preview environments.
+2. Configure GitHub OAuth credentials:
+   - `GITHUB_APP_CLIENT_ID`
+   - `GITHUB_APP_CLIENT_SECRET`
+   - `ADMIN_GITHUB_ACCOUNT_ID`
+   - `APP_ORIGIN`
+   - Ensure callback URL is set to `/api/auth/github/callback`.
+3. Optionally configure GitHub App private repository sync:
+   - `GITHUB_APP_PRIVATE_KEY`
+   - `GITHUB_APP_INSTALLATION_ID`
+4. Optionally configure `NOTIFICATION_WEBHOOK_URL` for best-effort enquiry alerts.

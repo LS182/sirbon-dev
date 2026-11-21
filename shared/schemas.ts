@@ -62,8 +62,8 @@ export const projectUpdateSchema = z.object({
   description: z.string().trim().max(5000).nullable().optional(),
   publicSummary: z.string().trim().max(500).nullable().optional(),
   publicDescription: z.string().trim().max(5000).nullable().optional(),
-  publicName: z.string().trim().min(1).max(120).nullable().optional(),
-  demoUrl: z.string().url().nullable().optional(),
+  publicName: z.string().trim().max(120).nullable().optional().transform((val) => val || null),
+  demoUrl: z.union([z.string().url(), z.literal('')]).nullable().optional().transform((val) => val || null),
   technologies: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
   featured: z.boolean(),
   published: z.boolean(),
@@ -72,3 +72,16 @@ export const projectUpdateSchema = z.object({
 })
 
 export type ProjectUpdate = z.infer<typeof projectUpdateSchema>
+
+export const enquiryStatusUpdateSchema = z.object({
+  id: z.string().trim().min(1).max(120),
+  status: z.enum(['new', 'read', 'archived']),
+})
+
+export const reviewModerationSchema = z.object({
+  id: z.string().trim().min(1).max(120),
+  status: z.enum(['approved', 'rejected', 'removed']),
+})
+
+export type EnquiryStatusUpdate = z.infer<typeof enquiryStatusUpdateSchema>
+export type ReviewModerationUpdate = z.infer<typeof reviewModerationSchema>

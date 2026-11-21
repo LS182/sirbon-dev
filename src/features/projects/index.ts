@@ -1,0 +1,7 @@
+export { ProjectCard } from './components/ProjectCard'
+export { ProjectRow } from './components/ProjectRow'
+export { caseStudies } from './data/caseStudies'
+export { useProjectDetail, usePublicProjects } from './hooks/useProjects'
+export { ProjectDetailPage } from './pages/ProjectDetailPage'
+export { ProjectsPage } from './pages/ProjectsPage'
+export type { CaseStudy, ProjectKind, PublicProject } from './types/project'

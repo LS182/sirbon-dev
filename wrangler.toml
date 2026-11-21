@@ -1,7 +1,10 @@
 name = "sirbon-dev"
+compatibility_date = "2026-11-21"
 pages_build_output_dir = "dist"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "sirbon"
+# Bind the existing remote D1 database (`sirbon`) via Cloudflare Pages Dashboard -> Settings -> Functions -> D1 database bindings,
+# or provide your database_id locally without committing credentials.
 database_id = ""
