@@ -32,14 +32,15 @@ npm run build
 npm run check:config
 ```
 
-## Cloudflare Pages & GitHub Setup
+## Cloudflare Workers & GitHub Setup
 
-The repository contains no credentials or real database IDs. Configure the following in the **Cloudflare Pages Dashboard** (`sirbon-dev`):
+The repository contains no secrets. Configure the following in the **Cloudflare Dashboard** (`Workers & Pages` → `sirbon-dev`):
 
 1. **Build settings**:
    - Build command: `npm run build`
-   - Build output directory: `dist`
-2. **D1 Database binding** (Settings → Functions → D1 database bindings):
+   - Deploy command: `npx wrangler deploy`
+   - Entrypoint & Static Assets: `worker/index.ts` + `[assets]` (`./dist`, `not_found_handling = "single-page-application"`, `run_worker_first = ["/api/*"]`) in `wrangler.toml`
+2. **D1 Database binding** (`wrangler.toml` `[[d1_databases]]`):
    - Variable name: `DB`
    - Database: `sirbon` (`0001_initial.sql` and `0002_portfolio_application.sql` already applied remotely)
 3. **GitHub OAuth (Required for Admin Login)**:
