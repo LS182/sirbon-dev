@@ -24,6 +24,12 @@ export async function failSyncHistory(db: D1Database, syncId: string, errorMessa
   ).bind('failed', errorMessage, syncId).run()
 }
 
+export async function getLatestSync(db: D1Database): Promise<SyncHistoryRow | null> {
+  return db.prepare(
+    'SELECT * FROM repository_sync_history ORDER BY started_at DESC LIMIT 1',
+  ).first<SyncHistoryRow>()
+}
+
 export async function listSyncHistory(db: D1Database) {
   const result = await db.prepare(
     'SELECT * FROM repository_sync_history ORDER BY started_at DESC LIMIT 20',

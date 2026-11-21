@@ -33,16 +33,10 @@ export function ProjectDetailPage() {
 
   const sections: Array<{ title: string; copy?: string; items?: string[] }> = []
   if (project.problem) sections.push({ title: 'Problem', copy: project.problem })
-  if (project.features && project.features.length > 0) {
-    sections.push({ title: 'Key features & deliverables', items: project.features })
-  }
   if (project.architecture.length > 0) sections.push({ title: 'Architecture', items: project.architecture })
   if (project.contribution.length > 0) sections.push({ title: "Liam's contribution", items: project.contribution })
   if (project.challenges.length > 0) {
-    sections.push({ title: 'Challenges and technical decisions', items: project.challenges })
-  }
-  if (project.lessons && project.lessons.length > 0) {
-    sections.push({ title: 'Lessons learned', items: project.lessons })
+    sections.push({ title: 'Challenges and decisions', items: project.challenges })
   }
 
   const nextStudy = caseStudies.find((item) => item.slug !== project.slug)
@@ -66,9 +60,13 @@ export function ProjectDetailPage() {
         </div>
         <div>
           <span>Technologies</span>
-          <div className="tags">
-            {project.technologies.map((tech) => <span key={tech}>{tech}</span>)}
-          </div>
+          {project.technologies.length > 0 ? (
+            <div className="tags">
+              {project.technologies.map((tech) => <span key={tech}>{tech}</span>)}
+            </div>
+          ) : (
+            <p className="muted-copy">No technologies listed.</p>
+          )}
         </div>
       </div>
 

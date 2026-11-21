@@ -28,15 +28,6 @@ export const caseStudies: CaseStudy[] = [
       'Moving database work and application infrastructure into a deployed environment rather than only a local setup.',
       'Separating landlord and student-facing workflows without hiding the underlying system complexity.',
     ],
-    features: [
-      'Structured property listing views with location, pricing and accommodation details.',
-      'Distinct workflow boundaries for student discovery and landlord listing management.',
-      'REST API integration backed by relational MySQL storage on deployed infrastructure.',
-    ],
-    lessons: [
-      'Early agreement on API payloads and database schema reduces integration friction across a student team.',
-      'Deploying to a live hosting environment surfaces configuration and migration constraints that local development hides.',
-    ],
     featured: true,
   },
   {
@@ -65,15 +56,6 @@ export const caseStudies: CaseStudy[] = [
       'Avoiding repeated data by identifying the stable dinner profile separately from scheduled occurrences.',
       'Choosing relationships that accurately reflect which entities are required and which can vary.',
       'Using terminology consistently throughout the ERD and supporting tables.',
-    ],
-    features: [
-      'Normalized 3NF entity definitions separating reusable dinner profiles from scheduled event instances.',
-      "Complete Crow's Foot ERD specifying primary keys, foreign keys, cardinality and optionality.",
-      'Explicit domain glossary aligning business rules with relational constraints.',
-    ],
-    lessons: [
-      'Separating template entities from scheduled occurrences prevents update anomalies and keeps historical records clean.',
-      'Writing down unambiguous domain terminology before drawing tables makes cardinality decisions straightforward.',
     ],
     featured: true,
   },

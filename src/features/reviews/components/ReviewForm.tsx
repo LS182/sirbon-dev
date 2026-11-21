@@ -59,7 +59,6 @@ export function ReviewForm() {
           name="projectReference"
           type="text"
           maxLength={160}
-          placeholder="e.g. StudentRent group project"
         />
       </div>
       <div className="form-field full">

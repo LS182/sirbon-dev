@@ -18,6 +18,17 @@ export interface SyncRecord {
   initiated_by?: string | null
 }
 
+export interface SyncSummaryResult {
+  success: boolean
+  repositoryCount: number
+  publicCount: number
+  privateCount: number
+  createdCount?: number
+  updatedCount?: number
+  removedCount?: number
+  archivedCount?: number
+}
+
 export interface IntegrationStatus {
   d1Configured: boolean
   oauthConfigured: boolean
@@ -42,7 +53,11 @@ export interface AdminProjectRecord {
   summary: string
   description: string | null
   demo_url: string | null
+  repository_id: string | null
   repository_full_name: string | null
+  default_branch: string | null
+  language: string | null
+  topics: string | string[]
   is_private: number | boolean
   technologies: string | string[]
   featured: number | boolean
@@ -52,6 +67,15 @@ export interface AdminProjectRecord {
   public_name: string | null
   public_summary: string | null
   public_description: string | null
+  synced_at: string | null
+}
+
+export interface AdminProjectsResponse {
+  projects: AdminProjectRecord[]
+  autoSynced: boolean
+  syncSummary: SyncSummaryResult | null
+  syncWarning: string | null
+  lastSync: SyncRecord | null
 }
 
 export interface AdminEnquiryRecord {

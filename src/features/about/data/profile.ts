@@ -12,16 +12,16 @@ export const engineeringPrinciples = [
   {
     number: '01',
     title: 'Understand the problem',
-    description: 'Clarify requirements, domain terminology and data relationships before choosing an implementation.',
+    description: 'Clarify requirements and data before choosing an implementation.',
   },
   {
     number: '02',
     title: 'Build the full path',
-    description: 'Consider interface, backend API, relational database and deployment workflow as one connected system.',
+    description: 'Consider interface, backend, database and deployment as one system.',
   },
   {
     number: '03',
     title: 'Keep learning',
-    description: 'Use each academic and practical project to sharpen engineering judgment and code maintainability.',
+    description: 'Use each project to improve engineering judgment and practical execution.',
   },
 ] as const

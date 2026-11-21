@@ -3,9 +3,10 @@ import { apiRequest } from '../../../shared/api/client'
 import type {
   AdminEnquiryRecord,
   AdminOverviewData,
-  AdminProjectRecord,
+  AdminProjectsResponse,
   AdminReviewRecord,
   SyncRecord,
+  SyncSummaryResult,
 } from '../types/admin'
 
 function mutationHeaders(csrfToken: string): HeadersInit {
@@ -19,13 +20,13 @@ export function fetchAdminOverview(): Promise<AdminOverviewData> {
   return apiRequest<AdminOverviewData>('/api/admin/overview')
 }
 
-export async function fetchAdminProjects(): Promise<AdminProjectRecord[]> {
-  const data = await apiRequest<{ projects: AdminProjectRecord[] }>('/api/admin/projects')
-  return data.projects
+export function fetchAdminProjects(options?: { autoSync?: boolean }): Promise<AdminProjectsResponse> {
+  const query = options?.autoSync === false ? '?autoSync=false' : ''
+  return apiRequest<AdminProjectsResponse>(`/api/admin/projects${query}`)
 }
 
-export function triggerRepositorySync(csrfToken: string) {
-  return apiRequest<{ success: boolean; repositoryCount: number; publicCount: number; privateCount: number }>(
+export function triggerRepositorySync(csrfToken: string): Promise<SyncSummaryResult> {
+  return apiRequest<SyncSummaryResult>(
     '/api/admin/projects/sync',
     { method: 'POST', headers: mutationHeaders(csrfToken) },
   )

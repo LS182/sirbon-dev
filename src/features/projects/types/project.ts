@@ -25,8 +25,6 @@ export interface CaseStudy {
   architecture: string[]
   contribution: string[]
   challenges: string[]
-  features?: string[]
-  lessons?: string[]
   featured: boolean
   repositoryUrl?: string
   demoUrl?: string

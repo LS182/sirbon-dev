@@ -1,5 +1,7 @@
 import type { Env } from '../config/env'
 
+const GITHUB_API_VERSION = '2022-11-28'
+
 function encodeBase64Url(bytes: Uint8Array): string {
   let binary = ''
   for (let i = 0; i < bytes.length; i++) {
@@ -78,11 +80,12 @@ export async function createGitHubAppJwt(
   privateKeyPem: string,
   nowSeconds = Math.floor(Date.now() / 1000),
 ): Promise<string> {
+  const cleanIssuer = issuer.trim()
   const header = encodeJsonBase64Url({ alg: 'RS256', typ: 'JWT' })
   const payload = encodeJsonBase64Url({
     iat: nowSeconds - 60,
     exp: nowSeconds + 540,
-    iss: issuer,
+    iss: cleanIssuer,
   })
   const signingInput = `${header}.${payload}`
   const key = await importGitHubAppPrivateKey(privateKeyPem)
@@ -99,30 +102,57 @@ export interface InstallationToken {
   expiresAt?: string
 }
 
+async function readSafeGitHubErrorMessage(response: Response): Promise<string> {
+  try {
+    const body = await response.json() as { message?: string }
+    if (typeof body.message === 'string' && body.message.trim()) {
+      return body.message.trim().slice(0, 180)
+    }
+  } catch {
+    // Ignore non-JSON error bodies
+  }
+  return ''
+}
+
 export async function requestGitHubInstallationToken(env: Env): Promise<InstallationToken | null> {
-  const issuer = env.GITHUB_APP_ID || env.GITHUB_APP_CLIENT_ID
-  if (!env.GITHUB_APP_PRIVATE_KEY || !env.GITHUB_APP_INSTALLATION_ID || !issuer) {
+  const issuer = (env.GITHUB_APP_ID || env.GITHUB_APP_CLIENT_ID || '').trim()
+  const installationId = (env.GITHUB_APP_INSTALLATION_ID || '').trim()
+  const privateKey = (env.GITHUB_APP_PRIVATE_KEY || '').trim()
+
+  if (!privateKey || !installationId || !issuer) {
     return null
   }
 
-  const appJwt = await createGitHubAppJwt(issuer, env.GITHUB_APP_PRIVATE_KEY)
+  let appJwt: string
+  try {
+    appJwt = await createGitHubAppJwt(issuer, privateKey)
+  } catch {
+    throw new Error('GitHub App private key could not be parsed (verify PEM format in GITHUB_APP_PRIVATE_KEY)')
+  }
+
   const response = await fetch(
-    `https://api.github.com/app/installations/${encodeURIComponent(env.GITHUB_APP_INSTALLATION_ID)}/access_tokens`,
+    `https://api.github.com/app/installations/${encodeURIComponent(installationId)}/access_tokens`,
     {
       method: 'POST',
       headers: {
         Accept: 'application/vnd.github+json',
         Authorization: `Bearer ${appJwt}`,
         'User-Agent': 'sirbon-dev',
+        'X-GitHub-Api-Version': GITHUB_API_VERSION,
       },
     },
   )
 
   if (!response.ok) {
+    const detail = await readSafeGitHubErrorMessage(response)
+    const suffix = detail ? `: ${detail}` : ''
     if (response.status === 401 || response.status === 403) {
-      throw new Error(`GitHub App authentication rejected (${response.status})`)
+      throw new Error(`GitHub App authentication rejected (${response.status})${suffix}`)
     }
-    throw new Error(`GitHub installation token request failed (${response.status})`)
+    if (response.status === 404) {
+      throw new Error(`GitHub App installation not found (${response.status})${suffix}`)
+    }
+    throw new Error(`GitHub installation token request failed (${response.status})${suffix}`)
   }
 
   const result = await response.json() as { token?: string; expires_at?: string }

@@ -32,6 +32,7 @@ import type {
   AdminReviewRecord,
   AdminSectionId,
   SyncRecord,
+  SyncSummaryResult,
 } from '../types/admin'
 
 const NAV_ITEMS: Array<{ id: AdminSectionId; label: string }> = [
@@ -42,6 +43,14 @@ const NAV_ITEMS: Array<{ id: AdminSectionId; label: string }> = [
   { id: 'reviews', label: 'Reviews' },
   { id: 'settings', label: 'Settings' },
 ]
+
+function formatSyncMessage(summary: SyncSummaryResult): string {
+  const parts = [`Synchronized ${summary.repositoryCount} repositories (${summary.publicCount} public, ${summary.privateCount} private)`]
+  if (summary.removedCount && summary.removedCount > 0) {
+    parts.push(`${summary.removedCount} removed/revoked hidden`)
+  }
+  return `${parts.join(' · ')}.`
+}
 
 export function AdminDashboardPage() {
   usePageTitle('Administration Dashboard')
@@ -56,19 +65,27 @@ export function AdminDashboardPage() {
 
   const [overview, setOverview] = useState<AdminOverviewData | null>(null)
   const [projects, setProjects] = useState<AdminProjectRecord[]>([])
+  const [projectsLastSync, setProjectsLastSync] = useState<SyncRecord | null>(null)
+  const [syncWarning, setSyncWarning] = useState<string | null>(null)
   const [history, setHistory] = useState<SyncRecord[]>([])
   const [enquiries, setEnquiries] = useState<AdminEnquiryRecord[]>([])
   const [reviews, setReviews] = useState<AdminReviewRecord[]>([])
   const [settings, setSettings] = useState<Record<string, string>>({})
 
-  const loadSection = useCallback(async (target: AdminSectionId) => {
+  const loadSection = useCallback(async (target: AdminSectionId, opts?: { skipAutoSync?: boolean }) => {
     setLoading(true)
     setError('')
     try {
       if (target === 'overview') {
         setOverview(await fetchAdminOverview())
       } else if (target === 'repositories') {
-        setProjects(await fetchAdminProjects())
+        const res = await fetchAdminProjects({ autoSync: opts?.skipAutoSync ? false : true })
+        setProjects(res.projects)
+        setProjectsLastSync(res.lastSync)
+        setSyncWarning(res.syncWarning)
+        if (res.autoSynced && res.syncSummary) {
+          setFeedback(formatSyncMessage(res.syncSummary))
+        }
       } else if (target === 'sync-history') {
         setHistory(await fetchSyncHistory())
       } else if (target === 'enquiries') {
@@ -97,14 +114,15 @@ export function AdminDashboardPage() {
     return () => window.clearTimeout(timer)
   }, [authenticated, loadSection, section])
 
-  async function runMutation(action: () => Promise<unknown>, successMessage: string) {
+  async function runMutation<T>(action: () => Promise<T>, messageForResult: string | ((result: T) => string)) {
     setBusy(true)
     setError('')
     setFeedback('')
     try {
-      await action()
-      setFeedback(successMessage)
-      await loadSection(section)
+      const result = await action()
+      const msg = typeof messageForResult === 'function' ? messageForResult(result) : messageForResult
+      setFeedback(msg)
+      await loadSection(section, { skipAutoSync: true })
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : 'Action failed')
     } finally {
@@ -171,15 +189,17 @@ export function AdminDashboardPage() {
         {feedback && <SuccessBanner message={feedback} />}
 
         {loading ? (
-          <LoadingState label="Loading administration data…" />
+          <LoadingState label={section === 'repositories' ? 'Loading & checking GitHub repositories…' : 'Loading administration data…'} />
         ) : (
           <>
             {section === 'overview' && overview && <AdminOverviewSection data={overview} />}
             {section === 'repositories' && (
               <AdminProjectsSection
                 projects={projects}
+                lastSync={projectsLastSync}
+                syncWarning={syncWarning}
                 busy={busy}
-                onSync={() => runMutation(() => triggerRepositorySync(csrfToken), 'Repository synchronization complete.')}
+                onSync={() => runMutation(() => triggerRepositorySync(csrfToken), formatSyncMessage)}
                 onUpdateProject={(slug: string, payload: ProjectUpdate, message: string) =>
                   runMutation(() => updateAdminProjectRecord(slug, payload, csrfToken), message)}
               />

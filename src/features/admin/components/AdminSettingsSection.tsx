@@ -20,12 +20,12 @@ export function AdminSettingsSection({ settings, busy, onSave }: AdminSettingsSe
         }}
       >
         <div className="form-field full">
-          <label htmlFor="setting-availability">Availability status note</label>
+          <label htmlFor="setting-availability">Availability note</label>
           <input
             id="setting-availability"
             name="availability_note"
             defaultValue={settings.availability_note || ''}
-            placeholder="e.g. Available for 2027 graduate software engineering roles"
+            placeholder="Optional note stored in site settings"
           />
         </div>
         <div className="form-field full">
@@ -34,7 +34,7 @@ export function AdminSettingsSection({ settings, busy, onSave }: AdminSettingsSe
             id="setting-headline"
             name="contact_headline"
             defaultValue={settings.contact_headline || ''}
-            placeholder="Optional note stored in D1 site_settings"
+            placeholder="Optional note stored in site settings"
           />
         </div>
         <button type="submit" className="button primary" disabled={busy}>

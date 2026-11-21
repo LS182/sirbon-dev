@@ -1,43 +1,38 @@
-import { ArrowRight, Wrench } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '../../../shared/components'
 import { usePageTitle } from '../../../shared/hooks/usePageTitle'
-import { serviceCapabilities } from '../data/services'
+import { profile } from '../../about'
+import { skillGroups } from '../../skills'
 
 export function ServicesPage() {
-  usePageTitle('Services & Capabilities')
+  usePageTitle('Focus & Capabilities')
 
   return (
     <section className="page inner-page services-page">
       <PageHeader
-        eyebrow="SERVICES & CAPABILITIES"
-        title="Practical development & collaboration."
-        intro="Available for graduate and junior software engineering roles, technical collaboration, and well-scoped full-stack or database development work."
+        eyebrow="FOCUS & CAPABILITIES"
+        title="Areas of development work."
+        intro={profile.direction}
       />
 
-      <div className="services-grid">
-        {serviceCapabilities.map((service) => (
-          <article className="service-card" key={service.number}>
-            <div className="service-header">
-              <span className="index-number">{service.number}</span>
-              <Wrench size={18} aria-hidden="true" />
-            </div>
-            <h2>{service.title}</h2>
-            <p>{service.summary}</p>
-            <ul>
-              {service.details.map((detail) => <li key={detail}>{detail}</li>)}
-            </ul>
+      <div className="capability-list">
+        {skillGroups.map((group, index) => (
+          <article className="capability-row" key={group.id}>
+            <span className="index-number">{String(index + 1).padStart(2, '0')}</span>
+            <h2>{group.title}</h2>
+            <p>{group.items.join(' · ')}</p>
           </article>
         ))}
       </div>
 
       <div className="cta-strip">
         <div>
-          <h2>Have a role or project in mind?</h2>
-          <p>Share the problem context, timeline or team requirements and I will respond promptly.</p>
+          <h2>Interested in collaborating or discussing a role?</h2>
+          <p>Use the contact form to share an opportunity, project scope or technical question.</p>
         </div>
         <Link className="button primary" to="/contact">
-          Discuss an opportunity <ArrowRight size={16} aria-hidden="true" />
+          Get in touch <ArrowRight size={16} aria-hidden="true" />
         </Link>
       </div>
     </section>
